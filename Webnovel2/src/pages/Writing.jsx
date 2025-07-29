@@ -3,10 +3,24 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import "../styles/writing.css";
 import { rewriteTextWithGemini } from "../services/gemini";
+import { useNavigate,useParams } from "react-router-dom";
+import { useFirebase } from "../context/Firebase";
+
 
 const Writing = () => {
   const [chapterName, setChapterName] = useState("");
   const [fontSize, setFontSize] = useState(16);
+  const navigate=useNavigate();
+  const {bookId}=useParams();
+  const { publishChatper }=useFirebase();
+
+  
+
+  const toPublishChapter=()=>{
+    publishChatper(editor.getText(),chapterName,bookId);
+    alert("Chapter added!");
+  }
+
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -17,6 +31,10 @@ const Writing = () => {
       },
     },
   });
+
+  const previousPage=()=>{
+    navigate('/book/'+bookId);
+  }
 
   const increaseFontSize = () => setFontSize(prev => prev + 2);
   const decreaseFontSize = () => setFontSize(prev => Math.max(10, prev - 2));
@@ -48,12 +66,14 @@ const Writing = () => {
       />
 
       <div className="editor-toolbar">
+        <button onClick={previousPage}>Return</button>
         <button onClick={() => editor.chain().focus().toggleBold().run()} className={editor.isActive('bold') ? 'active' : ''}>Bold</button>
         <button onClick={() => editor.chain().focus().toggleItalic().run()} className={editor.isActive('italic') ? 'active' : ''}>Italic</button>
         <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={editor.isActive('underline') ? 'active' : ''}>Underline</button>
         <button onClick={decreaseFontSize}>– Font</button>
         <button onClick={increaseFontSize}>+ Font</button>
         <button onClick={editWithAI}>Edit with AI</button>
+        <button onClick={toPublishChapter}>Publish</button>
       </div>
 
       <EditorContent editor={editor} className="editor" />

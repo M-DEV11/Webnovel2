@@ -1,11 +1,24 @@
-import { createContext, useContext, useState, useEffect, use } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
-import { getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,GoogleAuthProvider,signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
-import {getFirestore,addDoc,collection,getDocs} from "firebase/firestore";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
+} from "firebase/auth";
+import {
+  getFirestore,
+  setDoc,
+  doc,
+  collection,
+  getDocs,
+  query
+} from "firebase/firestore";
 
-
-const FirebaseContext = createContext(null);
-
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyC9c8sWPFU-u5_hIzzpiVxp7s3iu81-fmE",
   authDomain: "webnovel2-f74f3.firebaseapp.com",
@@ -15,48 +28,123 @@ const firebaseConfig = {
   appId: "1:711373815500:web:e5d1fd8aab62aa611f4c69"
 };
 
+// Init Firebase
 const app = initializeApp(firebaseConfig);
-
-export const useFirebase = () => useContext(FirebaseContext);
+const db = getFirestore(app);
 const auth = getAuth(app);
-const googleProvier = new GoogleAuthProvider();
+const googleProvider = new GoogleAuthProvider();
 
+const FirebaseContext = createContext(null);
 
-export const registerUser = async (email, password) => {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-}
+// ⛳ Custom hook
+export const useFirebase = () => useContext(FirebaseContext);
 
-export const loginUser = async (email, password) => {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
-}
-
-export const loginWithGoogle = async () => {
-  const userCredential = await signInWithPopup(auth, googleProvier);
-}
-
-export const logoutUser = async () => {
-  await signOut(auth);
-  console.log("User logged out");
-}
-
-export const FirebaseProvider = (props)=>{
+// ✅ All Firebase Functions
+export const FirebaseProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
-useEffect(() => {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      setUser(user);
-    } else {
-      setUser(null);
-    }
-  });
-}, []);
+  // 🔐 Auth listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser || null);
+    });
+    return () => unsubscribe();
+  }, []);
 
-const isLoggedIn = (user)? true : false;
+  const registerUser = async (email, password) =>
+    await createUserWithEmailAndPassword(auth, email, password);
+
+  const loginUser = async (email, password) =>
+    await signInWithEmailAndPassword(auth, email, password);
+
+  const loginWithGoogle = async () =>
+    await signInWithPopup(auth, googleProvider);
+
+  const logoutUser = async () => {
+    await signOut(auth);
+    console.log("User logged out");
+  };
+
+  const publishChatper=async(content,title,bookId)=>{
+    const chapter={
+      title:title,
+      content:content,
+      time:Date.now()
+    }
+    const chapterID=Date.now().toString();
+    await setDoc(doc(db,'books',bookId,'chapters',chapterID),chapter);
+    console.log("Doc added!");
+  }
+
+const addNewBook = async (name, genre, synopsis, posterUrl = '', user) => {
+  const bookID = Date.now().toString();
+
+  const book = {
+    title: name,
+    genre: genre,
+    description: synopsis,
+    author: user.displayName || user.email,
+    posterUrl: posterUrl,
+  };
+
+  await setDoc(doc(db, 'books', bookID), book); // ✅ Save to Firestore
+};
+
+const getChapters= async (bookId) => {
+  const q=query(collection(db,"books",bookId,"chapters"));
+  const allChapters=await getDocs(q);
+
+  const chapters=allChapters.docs.map(doc=>{
+    const data=doc.data();
+    return{
+      id:doc.id,
+      content:data.content,
+      title:data.title,
+      time:data.time      
+    }
+  })
+  return chapters;
+};
+
+
+  const getAllBooks=async()=>{
+    const q=query(collection(db,"books"));
+    const allBooks=await getDocs(q);
+
+    const books=allBooks.docs.map(doc=>{
+      const data=doc.data();
+      return {
+        id: doc.id,
+        title: data.title,
+        synopsis: data.description,
+        poster: data.posterUrl,
+        genre: data.genre,
+        author: data.author
+      }
+
+    })
+
+    return books;
+
+  }
+
 
   return (
-    <FirebaseContext.Provider value={{registerUser,loginUser,loginWithGoogle,isLoggedIn, user,logoutUser}}>
-      {props.children} 
+    <FirebaseContext.Provider
+      value={{
+        registerUser,
+        loginUser,
+        loginWithGoogle,
+        logoutUser,
+        isLoggedIn: !!user,
+        user,
+        addNewBook,
+        getAllBooks,
+        publishChatper,
+        getChapters
+      }}
+    >
+      {children}
     </FirebaseContext.Provider>
-  )
-}
+  );
+};

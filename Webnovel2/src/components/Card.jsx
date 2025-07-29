@@ -1,18 +1,30 @@
 import React from "react";
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
+import { useNavigate } from "react-router-dom";
 
-const CardComponent=()=>{
+const CardComponent=({book})=>{
+  if(!book){
+    console.log("No Book");
+    return;
+  }
+
+  const navigate=useNavigate();
+
+  const toBookPage = () => {
+  navigate(`/book/${book.id}`); // assuming book has a unique ID
+};
+
+
   return(
     <Card style={{ width: '18rem' }}>
-      <Card.Img variant="top" src="holder.js/100px180" />
+      <Card.Img variant="top" src={book.poster} />
       <Card.Body>
-        <Card.Title>Card Title</Card.Title>
+        <Card.Title>{book.title}</Card.Title>
         <Card.Text>
-          Some quick example text to build on the card title and make up the
-          bulk of the card's content.
+          {book.synopsis}
         </Card.Text>
-        <Button variant="primary">Go somewhere</Button>
+        <Button variant="primary" onClick={toBookPage}>Read</Button>
       </Card.Body>
     </Card>
   )

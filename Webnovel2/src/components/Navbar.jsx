@@ -27,7 +27,7 @@ const NavbarComponent = () => {
             navbarScroll
           >
             <Nav.Link href="/">Home</Nav.Link>
-            <Nav.Link href="/mybooks">My Books</Nav.Link>
+            {firebase.isLoggedIn && (<Nav.Link href="/mybooks">My Books</Nav.Link>)}
             { firebase.isLoggedIn? (<Nav.Link onClick={handleLogout}>Logout</Nav.Link>): (<Nav.Link href="/login">Login</Nav.Link>) }
             
           </Nav>
